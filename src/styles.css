@@ -7,6 +7,95 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Übergangsseite: lebendiger Einflug + sanftes "Atmen" der Logo-Bühne. */
+@keyframes logoEnter {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+@keyframes logoBreathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-7px) scale(1.015);
+  }
+}
+.logo-live {
+  animation:
+    logoEnter 900ms ease-out both,
+    logoBreathe 6s ease-in-out 900ms infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-live {
+    animation: logoEnter 600ms ease-out both;
+  }
+}
+
+/* Durchgehender Flip mit Ausholen + Anheben + leichtem Überschwingen. */
+@keyframes cardFlip {
+  0% {
+    transform: rotateY(0deg) scale(1);
+  }
+  12% {
+    transform: rotateY(-9deg) scale(1.01);
+  }
+  50% {
+    transform: rotateY(90deg) scale(1.06);
+  }
+  88% {
+    transform: rotateY(184deg) scale(1.004);
+  }
+  100% {
+    transform: rotateY(180deg) scale(1);
+  }
+}
+.card-flip {
+  animation: cardFlip var(--flip-ms, 2000ms) cubic-bezier(0.5, 0, 0.2, 1) both;
+}
+
+/* Marken-Rot glüht im Dreh-Moment entlang der Drehkante auf. */
+@keyframes redSpine {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(0.72);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translateX(-50%) scaleY(1);
+  }
+}
+.red-spine {
+  position: absolute;
+  left: 50%;
+  top: 6%;
+  bottom: 6%;
+  width: 3px;
+  transform: translateX(-50%) scaleY(0.72);
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    #dd0025 18%,
+    #ff3b54 50%,
+    #dd0025 82%,
+    transparent
+  );
+  box-shadow: 0 0 22px 3px rgba(221, 0, 37, 0.45);
+  border-radius: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+.red-spine.is-on {
+  animation: redSpine var(--flip-ms, 2000ms) ease-in-out both;
+}
+
 /*
  * Design system definition.
  *

@@ -11,17 +11,16 @@ const FADE_OUT_MS = 450;
 // Choreografie: altes Logo -> (blass + Drehung) -> neues Logo -> Text.
 // Alle Zeiten ab dem Moment, in dem das Alt-Logo wirklich sichtbar ist
 // (nicht ab Seitenstart) — so sieht man den Anfang garantiert klar.
-const FLIP_DELAY_MS = 4500; // Alt-Logo steht lange klar und deutlich
-const FLIP_MS = 1700; // Dauer der 3D-Drehung (langsam, gut sichtbar)
+const FLIP_DELAY_MS = 3500; // Alt-Logo steht klar und deutlich
+const FLIP_MS = 3200; // Dauer der 3D-Drehung (langsam – man sieht das Verwandeln)
 const PHASE2_DELAY_MS = FLIP_DELAY_MS + FLIP_MS - 250; // Text kurz vor Drehungsende
-const REDIRECT_DELAY_MS = 7800; // danach zügig zur neuen Website
+const REDIRECT_DELAY_MS = 8500; // danach zügig zur neuen Website
 // Falls das Logo-Bild nie "load" meldet (Cache/Fehler): trotzdem starten.
 const START_FALLBACK_MS = 2200;
 
 const ALT_ASPECT = 1337 / 1100; // 1.2156
 const NEU_ASPECT = 1843 / 1368; // 1.3472
 
-const FLIP_EASE = "cubic-bezier(0.65, 0, 0.35, 1)";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -192,17 +191,65 @@ function IntroScreen() {
     return () => window.removeEventListener("keydown", onKey);
   }, [skipNow]);
 
-  // 3D-Drehung: Vorderseite (alt) dreht weg, Rückseite (neu) kommt zum Vorschein
-  const cardRotation = flipping ? 180 : 0;
+  // Durchgehender Flip: EIN Objekt dreht 0° -> 180°. Beide Logos liegen auf
+  // derselben Karte; auf der hochkanten 90°-Stelle wird kurz überblendet, so
+  // dass es wie ein Umdrehen wirkt (klare Verwandlung statt zwei Logos).
+  const HALF = FLIP_MS / 2;
 
-  const faceBase: React.CSSProperties = {
-    position: "absolute",
-    left: "50%",
-    top: "50%",
+  // Drehung läuft als Keyframe-Animation (.card-flip) für Ausholen/Überschwingen.
+  const cardStyle: React.CSSProperties = {
+    position: "relative",
+    width: "100%",
     height: "100%",
-    transform: "translate(-50%, -50%)",
-    backfaceVisibility: "hidden",
-    WebkitBackfaceVisibility: "hidden",
+    transformStyle: "preserve-3d",
+    ["--flip-ms" as string]: `${FLIP_MS}ms`,
+    ...(reduceMotion ? { transform: "none" } : {}),
+  };
+
+  const layerBase: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transformOrigin: "center center",
+    willChange: "opacity",
+  };
+
+  // Alt-Logo = Vorderseite der Karte
+  const oldLayerStyle: React.CSSProperties = {
+    ...layerBase,
+    transform: "rotateY(0deg)",
+    opacity: flipping ? 0 : 1,
+    transition: reduceMotion
+      ? "opacity 600ms ease"
+      : `opacity 460ms ease ${HALF - 230}ms`,
+  };
+
+  // Neues b² = Rückseite der Karte (lokal um 180° gedreht, damit es nach dem
+  // Umdrehen seitenrichtig steht); unter reduced-motion ohne Drehung.
+  const newLayerStyle: React.CSSProperties = {
+    ...layerBase,
+    transform: reduceMotion ? "rotateY(0deg)" : "rotateY(180deg)",
+    opacity: flipping ? 1 : 0,
+    transition: reduceMotion
+      ? "opacity 700ms ease 250ms"
+      : `opacity 460ms ease ${HALF - 230}ms`,
+  };
+
+  const maskStyle: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    backgroundColor: palette.ink,
+    WebkitMaskImage: `url(${logoNeuSrc})`,
+    maskImage: `url(${logoNeuSrc})`,
+    WebkitMaskRepeat: "no-repeat",
+    maskRepeat: "no-repeat",
+    WebkitMaskPosition: "center",
+    maskPosition: "center",
+    WebkitMaskSize: "contain",
+    maskSize: "contain",
+    transition: "background-color 700ms ease",
   };
 
   return (
@@ -221,7 +268,8 @@ function IntroScreen() {
       }}
     >
       {/* ------------------------------------------------------------------ */}
-      {/* Bühne mit 3D-Perspektive: das Logo dreht sich von alt zu neu */}
+      {/* Bühne: Logo fliegt lebendig ein, "atmet" leicht und dreht sich      */}
+      {/* dann von alt zu neu.                                                */}
       {/* ------------------------------------------------------------------ */}
       <div
         aria-label="bühler² interior"
@@ -236,58 +284,51 @@ function IntroScreen() {
           pointerEvents: "none",
         }}
       >
+        {/* Wrapper: Einflug + Atmen (CSS); Perspektive für die Drehung */}
         <div
+          className="logo-live"
           style={{
             position: "relative",
             width: "100%",
             height: "100%",
-            transformStyle: "preserve-3d",
-            transform: `rotateY(${cardRotation}deg)`,
-            transition: reduceMotion
-              ? "none"
-              : `transform ${FLIP_MS}ms ${FLIP_EASE}`,
+            perspective: "1400px",
           }}
         >
-          {/* Vorderseite: altes Logo (Bühler Einrichtungen) */}
+          {/* Eine Karte, die sich umdreht */}
           <div
-            style={{
-              ...faceBase,
-              aspectRatio: String(ALT_ASPECT),
-              // kurz vor/während der Drehung blass werden
-              filter: flipping ? "grayscale(1)" : "grayscale(0)",
-              opacity: reduceMotion ? 0 : flipping ? 0.35 : 1,
-              transition: "filter 700ms ease, opacity 700ms ease",
-            }}
+            className={flipping && !reduceMotion ? "card-flip" : undefined}
+            style={cardStyle}
           >
-            <img
-              ref={oldImgRef}
-              src={logoAltSrc}
-              alt=""
-              draggable={false}
-              onLoad={() => setOldLoaded(true)}
-              style={{ width: "100%", height: "100%", objectFit: "contain" }}
-            />
-          </div>
+            {/* Alt-Logo (Vorderseite) */}
+            <div style={oldLayerStyle}>
+              <img
+                ref={oldImgRef}
+                src={logoAltSrc}
+                alt=""
+                draggable={false}
+                onLoad={() => setOldLoaded(true)}
+                style={{
+                  height: "100%",
+                  maxWidth: "100%",
+                  aspectRatio: String(ALT_ASPECT),
+                  objectFit: "contain",
+                }}
+              />
+            </div>
 
-          {/* Rückseite: neues Logo (b²), eingefärbt für Light/Dark */}
-          <div
-            style={{
-              ...faceBase,
-              aspectRatio: String(NEU_ASPECT),
-              transform: "translate(-50%, -50%) rotateY(180deg)",
-              backgroundColor: palette.ink,
-              WebkitMaskImage: `url(${logoNeuSrc})`,
-              maskImage: `url(${logoNeuSrc})`,
-              WebkitMaskRepeat: "no-repeat",
-              maskRepeat: "no-repeat",
-              WebkitMaskPosition: "center",
-              maskPosition: "center",
-              WebkitMaskSize: "contain",
-              maskSize: "contain",
-              transition: "background-color 700ms ease",
-            }}
-          />
+            {/* Neues b² (Rückseite, als Maske eingefärbt für Light/Dark) */}
+            <div style={newLayerStyle}>
+              <div style={maskStyle} />
+            </div>
+          </div>
         </div>
+
+        {/* Marken-roter Lichtspalt auf der Drehkante */}
+        <div
+          aria-hidden="true"
+          className={`red-spine${flipping && !reduceMotion ? " is-on" : ""}`}
+          style={{ ["--flip-ms" as string]: `${FLIP_MS}ms` }}
+        />
       </div>
 
       {/* ------------------------------------------------------------------ */}
