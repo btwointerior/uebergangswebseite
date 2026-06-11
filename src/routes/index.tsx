@@ -14,7 +14,7 @@ const FADE_OUT_MS = 450;
 const FLIP_DELAY_MS = 3500; // Alt-Logo steht klar und deutlich
 const FLIP_MS = 3200; // Dauer der 3D-Drehung (langsam – man sieht das Verwandeln)
 const PHASE2_DELAY_MS = FLIP_DELAY_MS + FLIP_MS - 250; // Text kurz vor Drehungsende
-const REDIRECT_DELAY_MS = 8500; // danach zügig zur neuen Website
+const REDIRECT_DELAY_MS = 15000; // Text bleibt ~8,5 s lesbar, dann zur neuen Website
 // Falls das Logo-Bild nie "load" meldet (Cache/Fehler): trotzdem starten.
 const START_FALLBACK_MS = 2200;
 
